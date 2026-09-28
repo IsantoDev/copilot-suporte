@@ -1,0 +1,14 @@
+# segredos
+.env
+
+# ambiente e caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# dados e modelos 
+data/
+models/
