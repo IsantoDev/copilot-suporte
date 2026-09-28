@@ -8,7 +8,7 @@ load_dotenv()
 BASE_URL = 'https://api.movidesk.com/public/v1'
 TOKEN = os.getenv('MOVIDESK_TOKEN')
 
-def buscar_ticket(top: int = 5) -> list[dict]:
+def buscar_ticket(top: int = 1) -> list[dict]:
     """Busca os primeiro tickets do Movidesk, com as ações"""
     if not TOKEN:
         raise RuntimeError("MOVIDESCK_TOKEN não encontrado")
@@ -16,7 +16,7 @@ def buscar_ticket(top: int = 5) -> list[dict]:
     params = {
         "token": TOKEN,
         "$select": "id,subject,createdDate,category,urgency,baseStatus,lastUpdate",
-        "$expand": "actions",
+        "$expand": "actions($select=id,type,origin,description,createdDate;$expand=createdBy($select=id,profileType))",
         "$orderby": "id asc",
         "$top": top,
     }
@@ -35,3 +35,4 @@ if __name__ == '__main__':
     if primeiro.get('actions'):
         print("Chaves de uma ação:", list(primeiro['actions'][0].keys()))
     print("Menor id:", primeiro["id"], "| criado em:", primeiro["createdDate"])
+    print("Chaves do createdBy:", list(primeiro["actions"][0]["createdBy"].keys()))
