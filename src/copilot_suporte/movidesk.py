@@ -53,6 +53,7 @@ def buscar_todos(rota: str = 'tickets', por_pagina: int = 100, max_paginas: int 
     return todos        
 
 if __name__ == "__main__":
-    tickets = buscar_todos(por_pagina=2, max_paginas=3)
+    tickets = buscar_todos(por_pagina=100)
     ids = [t["id"] for t in tickets]
-    print("Total:", len(tickets), "| ids:", ids)
+    print("Total:", len(tickets), "| menor id:", min(ids), "| maior id:", max(ids))
+    print("ids repetidos:", len(ids) - len(set(ids)))
