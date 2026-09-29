@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copiloto de Suporte</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e7c6b'/%3E%3Ccircle cx='14' cy='14' r='7' fill='none' stroke='white' stroke-width='3'/%3E%3Cpath d='M19.5 19.5l6 6' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --fundo: #f3f5f2;
+    --papel: #ffffff;
+    --afundado: #eaeee9;
+    --tinta: #16202a;
+    --suave: #5b6770;
+    --linha: #dbe1db;
+    --marca: #0e7c6b;
+    --marca-claro: #dcefe9;
+    --interno: #9a6400;
+    --interno-claro: #f7ecd4;
+    --forte: #0e7c6b;
+    --media: #2f6fb0;
+    --fraca: #8a949a;
+    --erro: #b3261e;
+    --sombra: 0 1px 2px rgb(22 32 42 / .05), 0 4px 16px rgb(22 32 42 / .05);
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --fundo: #0f1518; --papel: #172025; --afundado: #1e292f; --tinta: #e6ece9; --suave: #95a39d; --linha: #2a363c;
+      --marca: #4fc4ae; --marca-claro: #173731; --interno: #e3b35c; --interno-claro: #372c16;
+      --forte: #4fc4ae; --media: #7fb2e8; --fraca: #7d898f; --erro: #ff8a80;
+      --sombra: 0 1px 2px rgb(0 0 0 / .3), 0 4px 16px rgb(0 0 0 / .25);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
+
+  /* Cabeçalho */
+  header { border-bottom: 1px solid var(--linha); background: var(--papel); }
+  .barra-topo { max-width: 960px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; background: var(--marca); display: grid; place-items: center; }
+  .logo svg { width: 18px; height: 18px; }
+  .nome { font-weight: 700; letter-spacing: -.01em; }
+  .nome small { display: block; font-weight: 400; font-size: 12.5px; color: var(--suave); letter-spacing: 0; }
+
+  main { max-width: 960px; margin: 0 auto; padding: 28px 20px 72px; }
+
+  /* Busca */
+  .busca { background: var(--papel); border: 1px solid var(--linha); border-radius: 14px; padding: 18px; box-shadow: var(--sombra); }
+  .modos { display: inline-flex; background: var(--afundado); border-radius: 9px; padding: 3px; gap: 2px; margin-bottom: 14px; }
+  .modos button { border: 0; background: transparent; padding: 6px 14px; border-radius: 7px; cursor: pointer; color: var(--suave); font-weight: 500; font-size: 14px; }
+  .modos button[aria-pressed="true"] { background: var(--papel); color: var(--tinta); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+  .linha-busca { display: flex; gap: 10px; }
+  .campo { flex: 1; position: relative; }
+  .campo input { width: 100%; padding: 12px 14px; border: 1px solid var(--linha); border-radius: 10px; background: var(--papel); font-size: 16px; }
+  .campo input::placeholder { color: var(--fraca); }
+  .campo kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 12px var(--mono); color: var(--fraca); border: 1px solid var(--linha); border-radius: 5px; padding: 1px 6px; }
+  .enviar { border: 0; background: var(--marca); color: #fff; padding: 0 22px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+  .enviar:disabled { opacity: .6; cursor: progress; }
+  .exemplos { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 12px; font-size: 13px; color: var(--suave); }
+  .exemplos button { border: 1px solid var(--linha); background: transparent; border-radius: 99px; padding: 3px 11px; cursor: pointer; font-size: 13px; color: var(--tinta); }
+  .exemplos button:hover { border-color: var(--marca); color: var(--marca); }
+  @media (max-width: 560px) { .linha-busca { flex-direction: column; } .enviar { padding: 12px; } .campo kbd { display: none; } }
+
+  /* Situação */
+  .situacao { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 26px 2px 4px; min-height: 24px; }
+  .situacao h2 { font-size: 15px; margin: 0; font-weight: 600; }
+  .situacao span { font: 12.5px var(--mono); color: var(--suave); }
+  .situacao.erro h2 { color: var(--erro); }
+  .legenda { display: flex; gap: 14px; font-size: 12.5px; color: var(--suave); flex-wrap: wrap; margin: 0 2px 12px; }
+  .legenda i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+
+  /* Resultados */
+  .lista { display: grid; gap: 12px; }
+  .cartao { background: var(--papel); border: 1px solid var(--linha); border-radius: 12px; padding: 16px 18px; display: grid; grid-template-columns: 34px 1fr; gap: 0 14px; }
+  .posicao { font: 500 13px var(--mono); color: var(--suave); padding-top: 2px; }
+  .cabeca { display: flex; gap: 10px 14px; align-items: baseline; flex-wrap: wrap; }
+  .assunto { font-weight: 600; font-size: 15.5px; flex: 1; min-width: 220px; }
+  .id { font: 13px var(--mono); color: var(--suave); }
+  .identificacao { display: inline-flex; align-items: center; gap: 6px; }
+  .abrir { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; color: var(--marca); }
+  .abrir svg { width: 16px; height: 16px; }
+  .abrir:hover { background: var(--marca-claro); }
+  .forca { display: inline-flex; align-items: center; gap: 8px; font: 12.5px var(--mono); white-space: nowrap; }
+  .medidor { width: 64px; height: 5px; border-radius: 99px; background: var(--afundado); overflow: hidden; }
+  .medidor i { display: block; height: 100%; border-radius: 99px; }
+  .forte { color: var(--forte); } .forte .medidor i { background: var(--forte); }
+  .media { color: var(--media); } .media .medidor i { background: var(--media); }
+  .fraca { color: var(--fraca); } .fraca .medidor i { background: var(--fraca); }
+
+  .bloco { grid-column: 2; margin-top: 12px; border-radius: 9px; padding: 11px 13px; }
+  .bloco header { all: unset; display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .rotulo { font: 600 11px/1 var(--sans); letter-spacing: .07em; text-transform: uppercase; }
+  .publica { background: var(--marca-claro); } .publica .rotulo { color: var(--marca); }
+  .interna { background: var(--interno-claro); } .interna .rotulo { color: var(--interno); }
+  .corpo { white-space: pre-wrap; font-size: 14px; overflow-wrap: anywhere; }
+  .corpo.recolhido { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+  .acoes { display: flex; gap: 4px; }
+  .acoes button { border: 0; background: transparent; font-size: 12.5px; color: var(--suave); cursor: pointer; padding: 2px 6px; border-radius: 5px; }
+  .acoes button:hover { color: var(--tinta); background: rgb(127 127 127 / .12); }
+
+  /* Carregando e vazio */
+  .esqueleto { height: 118px; border-radius: 12px; background: linear-gradient(90deg, var(--papel) 0%, var(--afundado) 50%, var(--papel) 100%); background-size: 200% 100%; animation: brilho 1.2s ease-in-out infinite; border: 1px solid var(--linha); }
+  @keyframes brilho { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+  @media (prefers-reduced-motion: reduce) { .esqueleto { animation: none; } }
+  .vazio { text-align: center; color: var(--suave); padding: 36px 16px; border: 1px dashed var(--linha); border-radius: 12px; }
+  .vazio strong { display: block; color: var(--tinta); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="barra-topo">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
+    </div>
+    <div class="nome">Copiloto de Suporte<small>Tickets resolvidos parecidos, com a solução</small></div>
+  </div>
+</header>
+
+<main>
+  <section class="busca" aria-label="Busca">
+    <div class="modos" role="group" aria-label="Tipo de busca">
+      <button type="button" id="modo-ticket" aria-pressed="true">Por ticket</button>
+      <button type="button" id="modo-texto" aria-pressed="false">Por descrição</button>
+    </div>
+    <form id="formulario" class="linha-busca">
+      <div class="campo">
+        <input id="consulta" autocomplete="off" aria-label="Número ou protocolo do ticket">
+        <kbd>/</kbd>
+      </div>
+      <button class="enviar" id="enviar" type="submit">Buscar</button>
+    </form>
+    <div class="exemplos" id="exemplos"></div>
+  </section>
+
+  <div class="situacao" id="situacao"><h2>Resultados</h2><span></span></div>
+  <div class="legenda" aria-label="Legenda da similaridade">
+    <span><i style="background:var(--forte)"></i>forte ≥ 0,70</span>
+    <span><i style="background:var(--media)"></i>média 0,60–0,70</span>
+    <span><i style="background:var(--fraca)"></i>fraca &lt; 0,60</span>
+  </div>
+  <section class="lista" id="lista" aria-live="polite">
+    <div class="vazio"><strong>Pesquise um ticket</strong>Digite o número ou o protocolo do Movidesk, ou troque para descrever o problema com as suas palavras.</div>
+  </section>
+</main>
+
+<script>
+const MODOS = {
+  ticket: { placeholder: "Número ou protocolo, ex.: 2929 ou 202609002869", rotulo: "Número ou protocolo do ticket",
+            exemplos: ["2929", "2185", "1715"] },
+  texto:  { placeholder: "Descreva o problema como o cliente escreveria", rotulo: "Descrição do problema",
+            exemplos: ["venda cancelada no pdv e não no protheus", "caixa com pendência que não fecha", "carga tributária não sincroniza"] },
+};
+let modo = "ticket";
+
+const $ = (id) => document.getElementById(id);
+const campo = $("consulta"), botao = $("enviar"), lista = $("lista"), situacao = $("situacao");
+
+function el(tag, classe, texto) {
+  const e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texto !== undefined) e.textContent = texto;   // textContent: o conteúdo dos tickets nunca é interpretado como HTML
+  return e;
+}
+
+function trocarModo(novo) {
+  modo = novo;
+  $("modo-ticket").setAttribute("aria-pressed", novo === "ticket");
+  $("modo-texto").setAttribute("aria-pressed", novo === "texto");
+  campo.placeholder = MODOS[novo].placeholder;
+  campo.setAttribute("aria-label", MODOS[novo].rotulo);
+  campo.inputMode = novo === "ticket" ? "numeric" : "text";
+  campo.value = "";
+  const caixa = $("exemplos");
+  caixa.replaceChildren(el("span", "", "Exemplos:"));
+  for (const exemplo of MODOS[novo].exemplos) {
+    const b = el("button", "", exemplo);
+    b.type = "button";
+    b.addEventListener("click", () => { campo.value = exemplo; buscar(); });
+    caixa.append(b);
+  }
+  campo.focus();
+}
+
+function forca(valor) {
+  const nivel = valor >= 0.70 ? "forte" : valor >= 0.60 ? "media" : "fraca";
+  const caixa = el("span", "forca " + nivel);
+  const medidor = el("span", "medidor");
+  const barra = el("i");
+  barra.style.width = Math.max(0, Math.min(1, valor)) * 100 + "%";
+  medidor.append(barra);
+  caixa.append(medidor, document.createTextNode(valor.toFixed(2).replace(".", ",")));
+  caixa.title = "similaridade de cosseno";
+  return caixa;
+}
+
+function bloco(classe, rotulo, texto) {
+  const caixa = el("div", "bloco " + classe);
+  const topo = el("header");
+  const acoes = el("div", "acoes");
+  const corpo = el("div", "corpo recolhido", texto);
+
+  const copiar = el("button", "", "Copiar");
+  copiar.type = "button";
+  copiar.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(texto); copiar.textContent = "Copiado"; }
+    catch { copiar.textContent = "Não copiou"; }
+    setTimeout(() => (copiar.textContent = "Copiar"), 1500);
+  });
+  acoes.append(copiar);
+
+  if (texto.split("\n").length > 5 || texto.length > 420) {
+    const expandir = el("button", "", "Ver tudo");
+    expandir.type = "button";
+    expandir.addEventListener("click", () => {
+      const recolhido = corpo.classList.toggle("recolhido");
+      expandir.textContent = recolhido ? "Ver tudo" : "Recolher";
+    });
+    acoes.append(expandir);
+  } else {
+    corpo.classList.remove("recolhido");
+  }
+
+  topo.append(el("span", "rotulo", rotulo), acoes);
+  caixa.append(topo, corpo);
+  return caixa;
+}
+
+const ICONE_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>';
+
+function identificacao(r) {
+  // O número do ticket, e ao lado um ícone que abre o chamado no Movidesk (quando o endereço está configurado).
+  const caixa = el("span", "identificacao");
+  caixa.append(el("span", "id", "#" + r.ticket_id));
+  if (r.link && r.link.startsWith("https://")) {
+    const a = el("a", "abrir");
+    a.href = r.link;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.title = "Abrir o chamado " + r.protocolo + " no Movidesk";
+    a.setAttribute("aria-label", a.title);
+    a.innerHTML = ICONE_LINK;   // único innerHTML da página: um ícone fixo, nunca conteúdo dos tickets
+    caixa.append(a);
+  }
+  return caixa;
+}
+
+function cartao(r, i) {
+  const c = el("article", "cartao");
+  const cabeca = el("div", "cabeca");
+  cabeca.append(el("span", "assunto", r.assunto || "(sem assunto)"), identificacao(r), forca(r.similaridade));
+  c.append(el("span", "posicao", String(i + 1).padStart(2, "0")), cabeca);
+  if (r.solucao_publica) c.append(bloco("publica", "Enviado ao cliente", r.solucao_publica));
+  if (r.solucao_interna) c.append(bloco("interna", "Nota técnica · só para o analista", r.solucao_interna));
+  return c;
+}
+
+function mostrarSituacao(titulo, detalhe, erro = false) {
+  situacao.className = "situacao" + (erro ? " erro" : "");
+  situacao.replaceChildren(el("h2", "", titulo), el("span", "", detalhe || ""));
+}
+
+async function buscar() {
+  const valor = campo.value.trim();
+  if (!valor) { campo.focus(); return; }
+  if (modo === "texto" && valor.length < 3) { mostrarSituacao("Descreva o problema com pelo menos 3 letras.", "", true); return; }
+
+  botao.disabled = true;
+  mostrarSituacao("Buscando…");
+  lista.replaceChildren(...Array.from({ length: 3 }, () => el("div", "esqueleto")));
+  const inicio = performance.now();
+
+  try {
+    const resposta = await fetch("/parecidos?" + new URLSearchParams({ [modo]: valor }));
+    const dados = await resposta.json();
+    if (!resposta.ok) throw new Error(typeof dados.detail === "string" ? dados.detail : "Não foi possível buscar.");
+    const segundos = ((performance.now() - inicio) / 1000).toFixed(1).replace(".", ",");
+    if (!dados.length) {
+      lista.replaceChildren(el("div", "vazio", "Nenhum ticket resolvido encontrado."));
+      mostrarSituacao("Sem resultados", segundos + " s");
+      return;
+    }
+    lista.replaceChildren(...dados.map(cartao));
+    mostrarSituacao(`${dados.length} tickets parecidos`, `${modo === "ticket" ? "ticket #" + valor : "descrição"} · ${segundos} s`);
+  } catch (erro) {
+    lista.replaceChildren();
+    mostrarSituacao(erro.message, "", true);
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+$("formulario").addEventListener("submit", (e) => { e.preventDefault(); buscar(); });
+$("modo-ticket").addEventListener("click", () => trocarModo("ticket"));
+$("modo-texto").addEventListener("click", () => trocarModo("texto"));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== campo) { e.preventDefault(); campo.focus(); campo.select(); }
+});
+trocarModo("ticket");
+</script>
+</body>
+</html>

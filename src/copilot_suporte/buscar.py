@@ -10,7 +10,10 @@ SQL_BUSCA = """
            1 - (v.embedding <=> %(consulta)s) as similaridade,
            t.assunto,
            s.solucao_publica,
-           s.solucao_interna
+           s.solucao_interna,
+           -- protocolo do Movidesk: ano e mês de abertura (horário de Brasília) + id com 6 dígitos
+           to_char(t.criado_em at time zone 'America/Sao_Paulo', 'YYYYMM')
+               || lpad(t.ticket_id::text, 6, '0') as protocolo
     from vetores_problemas v
     join limpo_tickets t on t.ticket_id = v.ticket_id
     join limpo_solucoes s on s.ticket_id = v.ticket_id
@@ -41,15 +44,13 @@ def numero_para_id(numero: int) -> int:
 
 
 def vetor_do_ticket(ticket_id: int):
-    """Busca o vetor já guardado de um ticket (documento × documento)."""
+    """Busca o vetor já guardado de um ticket (documento × documento), ou None."""
     with conectar() as conn:
         linha = conn.execute(
             "select embedding from vetores_problemas where ticket_id = %s and modelo = %s",
             (ticket_id, MODELO),
         ).fetchone()
-    if linha is None:
-        raise SystemExit(f"ticket {ticket_id} sem vetor (ainda não foi carregado?)")
-    return linha[0]
+    return linha[0] if linha else None
 
 
 def vetor_do_texto(texto: str):
@@ -75,14 +76,16 @@ def main() -> None:
     if args.ticket:
         excluir = numero_para_id(args.ticket)
         consulta = vetor_do_ticket(excluir)
+        if consulta is None:
+            raise SystemExit(f"ticket {excluir} sem vetor (ainda não foi carregado?)")
     elif args.texto:
         excluir = -1
         consulta = vetor_do_texto(" ".join(args.texto))
     else:
         parser.error("informe um texto ou --ticket")
 
-    for ticket_id, similaridade, assunto, publica, interna in buscar_parecidos(consulta, args.k, excluir):
-        print(f"\n#{ticket_id} · similaridade {similaridade:.2f} · {assunto}")
+    for ticket_id, similaridade, assunto, publica, interna, protocolo in buscar_parecidos(consulta, args.k, excluir):
+        print(f"\n#{ticket_id} ({protocolo}) · similaridade {similaridade:.2f} · {assunto}")
         print("  para o cliente:", limpar(publica)[:300])
         if interna:
             print("  técnico:", limpar(interna)[:300])
