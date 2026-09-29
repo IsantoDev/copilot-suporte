@@ -1,10 +1,11 @@
 import psycopg
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from psycopg.types.json import Jsonb
 
 load_dotenv()
-
+SQL_DIR = Path(__file__).resolve().parents[2] / "sql"
 
 SQL_UPSERT = """
     insert into public.bruto_tickets (id, last_update, payload)
@@ -31,4 +32,10 @@ def ultima_atualizacao():
     """Retorna o maior last_update gravado, ou None se a tabela estiver vazia."""
     with psycopg.connect(password=os.environ["PGPASSWORD"]) as conn:
         return conn.execute("select max(last_update) from public.bruto_tickets").fetchone()[0]
+
+def executar_sql(nome_arquivo: str) -> None:
+    """Executa um arquivo .sql da pasta sql/ numa transação só."""
+    sql = (SQL_DIR / nome_arquivo).read_text(encoding="utf-8")
+    with psycopg.connect(password=os.environ["PGPASSWORD"]) as conn:
+        conn.execute(sql)
 

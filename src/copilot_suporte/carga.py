@@ -1,6 +1,6 @@
 from datetime import timedelta, timezone
 
-from copilot_suporte.banco import salvar_raw, ultima_atualizacao
+from copilot_suporte.banco import salvar_raw, ultima_atualizacao,executar_sql
 from copilot_suporte.movidesk import buscar_historico, buscar_todos
 
 MARGEM = timedelta(minutes=30)  # a API leva alguns minutos para replicar
@@ -20,6 +20,9 @@ def executar_carga() -> None:
         tickets = buscar_todos(rota="tickets", filtro=filtro)
 
     salvar_raw(tickets)
+    for arquivo in ("002_limpo_tickets.sql", "003_limpo_acoes.sql"):
+        executar_sql(arquivo)
+        print("transformado:", arquivo)
     print("gravados:", len(tickets))
 
 
