@@ -1,6 +1,6 @@
 from datetime import timedelta, timezone
 
-from copilot_suporte.banco import salvar_raw, ultima_atualizacao,executar_sql
+from copilot_suporte.banco import salvar_raw, ultima_atualizacao,executar_sql,checar_qualidade
 from copilot_suporte.movidesk import buscar_historico, buscar_todos
 
 MARGEM = timedelta(minutes=30)  # a API leva alguns minutos para replicar
@@ -23,6 +23,13 @@ def executar_carga() -> None:
     for arquivo in ("002_limpo_tickets.sql", "003_limpo_acoes.sql"):
         executar_sql(arquivo)
         print("transformado:", arquivo)
+        
+    falhas = [(nome, n) for nome, n in checar_qualidade() if n > 0]
+    if falhas:
+        for nome, n in falhas:
+            print(f"  FALHOU: {nome} ({n} problemas)")
+        raise RuntimeError(f"{len(falhas)} checagem(ns) de qualidade falharam")
+    print("checagens de qualidade: ok")
     print("gravados:", len(tickets))
 
 

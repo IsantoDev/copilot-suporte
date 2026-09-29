@@ -28,10 +28,12 @@ def salvar_raw(tickets: list[dict]) -> None:
         with conn.cursor() as cur:
             cur.executemany(SQL_UPSERT, linhas)
 
+
 def ultima_atualizacao():
     """Retorna o maior last_update gravado, ou None se a tabela estiver vazia."""
     with psycopg.connect(password=os.environ["PGPASSWORD"]) as conn:
         return conn.execute("select max(last_update) from public.bruto_tickets").fetchone()[0]
+    
 
 def executar_sql(nome_arquivo: str) -> None:
     """Executa um arquivo .sql da pasta sql/ numa transação só."""
@@ -39,3 +41,9 @@ def executar_sql(nome_arquivo: str) -> None:
     with psycopg.connect(password=os.environ["PGPASSWORD"]) as conn:
         conn.execute(sql)
 
+
+def checar_qualidade() -> list[tuple[str, int]]:
+    """Roda sql/004_checagens.sql e devolve (checagem, problemas)."""
+    sql = (SQL_DIR / "004_checagens.sql").read_text(encoding="utf-8")
+    with psycopg.connect(password=os.environ["PGPASSWORD"]) as conn:
+        return conn.execute(sql).fetchall()
