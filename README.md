@@ -1,15 +1,5 @@
 # Copiloto de Suporte
 
-Projeto sobre os chamados reais de suporte de um software e customizações ERP (TOTVS Protheus), atendidos pelo Movidesk.
-
-
-## O problema
-
-No suporte, cada ticket novo passa por uma triagem manual: escolher categoria e urgência, entender o problema e procurar como casos parecidos foram resolvidos antes. Esse conhecimento fica espalhado nas conversas de tickets antigos e depende da memória de quem atende.
-
-## Escopo
-# Copiloto de Suporte
-
 Projeto sobre os chamados reais de suporte de um ERP (TOTVS Protheus), atendidos pelo Movidesk.
 
 > **Privacidade:** o projeto roda sobre dados reais de uma empresa, com autorização. **Nenhum dado de cliente está neste repositório.** Aqui estão só o código, o SQL e números agregados.
