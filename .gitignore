@@ -12,3 +12,6 @@ __pycache__/
 # dados e modelos 
 data/
 models/
+
+# logs do pipeline agendado
+logs/
