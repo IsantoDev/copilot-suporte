@@ -1,9 +1,17 @@
 from datetime import timedelta, timezone
 
-from copilot_suporte.banco import salvar_raw, ultima_atualizacao,executar_sql,checar_qualidade
+from copilot_suporte.banco import checar_qualidade, executar_sql, salvar_raw, ultima_atualizacao
 from copilot_suporte.movidesk import buscar_historico, buscar_todos
+from copilot_suporte.vetores import gerar_vetores
 
 MARGEM = timedelta(minutes=30)  # a API leva alguns minutos para replicar
+
+TRANSFORMACOES = (
+    "002_limpo_tickets.sql",
+    "003_limpo_acoes.sql",
+    "005_limpo_problema.sql",
+    "007_limpo_solucoes.sql",
+)
 
 
 def executar_carga() -> None:
@@ -20,17 +28,20 @@ def executar_carga() -> None:
         tickets = buscar_todos(rota="tickets", filtro=filtro)
 
     salvar_raw(tickets)
-    for arquivo in ("002_limpo_tickets.sql", "003_limpo_acoes.sql"):
+    print("gravados:", len(tickets))
+
+    for arquivo in TRANSFORMACOES:
         executar_sql(arquivo)
         print("transformado:", arquivo)
-        
+
+    print("vetores gerados:", gerar_vetores())
+
     falhas = [(nome, n) for nome, n in checar_qualidade() if n > 0]
     if falhas:
         for nome, n in falhas:
             print(f"  FALHOU: {nome} ({n} problemas)")
         raise RuntimeError(f"{len(falhas)} checagem(ns) de qualidade falharam")
     print("checagens de qualidade: ok")
-    print("gravados:", len(tickets))
 
 
 if __name__ == "__main__":

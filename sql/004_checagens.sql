@@ -33,4 +33,12 @@ select 'ticket fechado sem categoria',
        count(*)
 from limpo_tickets
 where status_base in ('Closed', 'Resolved')
-  and categoria is null;
+  and categoria is null
+
+union all
+select 'ticket sem vetor atualizado',
+       count(*)
+from limpo_problemas p
+left join vetores_problemas v on v.ticket_id = p.ticket_id
+where v.ticket_id is null
+   or v.texto_hash <> md5(p.texto);
