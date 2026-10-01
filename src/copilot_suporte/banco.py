@@ -47,3 +47,25 @@ def checar_qualidade() -> list[tuple[str, int]]:
     sql = (SQL_DIR / "004_checagens.sql").read_text(encoding="utf-8")
     with psycopg.connect(password=os.environ["PGPASSWORD"]) as conn:
         return conn.execute(sql).fetchall()
+
+def iniciar_execucao() -> int:
+    """Registra o início de uma execução e devolve o id dela."""
+    with psycopg.connect(password=os.environ["PGPASSWORD"]) as conn:
+        return conn.execute(
+            "insert into public.execucoes_pipeline default values returning id"
+        ).fetchone()[0]
+
+
+def finalizar_execucao(execucao_id: int, status: str, resumo: dict, erro: str | None = None) -> None:
+    """Fecha a execução com o status final e o que foi possível contar."""
+    with psycopg.connect(password=os.environ["PGPASSWORD"]) as conn:
+        conn.execute(
+            """
+            update public.execucoes_pipeline
+               set terminado_em = now(), status = %s, tickets = %s,
+                   vetores = %s, checagens_com_falha = %s, erro = %s
+             where id = %s
+            """,
+            (status, resumo.get("tickets"), resumo.get("vetores"),
+             resumo.get("checagens_com_falha"), erro, execucao_id),
+        )

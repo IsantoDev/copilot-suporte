@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
 
-from copilot_suporte.banco import checar_qualidade, executar_sql, salvar_raw, ultima_atualizacao
+from copilot_suporte.banco import checar_qualidade, executar_sql, salvar_raw, ultima_atualizacao,finalizar_execucao, iniciar_execucao
 from copilot_suporte.movidesk import buscar_historico, buscar_todos
 from copilot_suporte.vetores import gerar_vetores
+from copilot_suporte.banco import checar_qualidade, executar_sql, finalizar_execucao, iniciar_execucao, salvar_raw, ultima_atualizacao
 
-MARGEM = timedelta(minutes=30)  # a API leva alguns minutos para replicar
+MARGEM = timedelta(minutes=30)  
 
 TRANSFORMACOES = (
     "002_limpo_tickets.sql",
@@ -14,6 +15,22 @@ TRANSFORMACOES = (
 )
 
 
+def rodar() -> None:
+    """Executa a carga e registra a execução, com sucesso ou falha."""
+    execucao_id = iniciar_execucao()  
+    resumo = {}                        
+    status = "falha"                    
+    erro = None                         
+    try:
+        executar_carga(resumo)       
+        status = "sucesso"             
+    except Exception as e:
+        erro = type(e).__name__         
+        raise                          
+    finally:
+        finalizar_execucao(execucao_id, status, resumo, erro)  
+
+
 def montar_filtro(ultimo: datetime, margem: timedelta = MARGEM) -> str:
     """Filtro OData para buscar só o que mudou desde (ultimo - margem), em UTC."""
     desde = (ultimo - margem).astimezone(timezone.utc)
@@ -21,7 +38,7 @@ def montar_filtro(ultimo: datetime, margem: timedelta = MARGEM) -> str:
     return filtro
 
 
-def executar_carga() -> None:
+def executar_carga(resumo: dict) -> None:           
     """Carga completa na primeira vez; depois, só o que mudou."""
     ultimo = ultima_atualizacao()
 
@@ -34,15 +51,18 @@ def executar_carga() -> None:
         tickets = buscar_todos(rota="tickets", filtro=filtro)
 
     salvar_raw(tickets)
+    resumo["tickets"] = len(tickets)                
     print("gravados:", len(tickets))
 
     for arquivo in TRANSFORMACOES:
         executar_sql(arquivo)
         print("transformado:", arquivo)
 
-    print("vetores gerados:", gerar_vetores())
+    resumo["vetores"] = gerar_vetores()                  
+    print("vetores gerados:", resumo["vetores"])
 
     falhas = [(nome, n) for nome, n in checar_qualidade() if n > 0]
+    resumo["checagens_com_falha"] = len(falhas)
     if falhas:
         for nome, n in falhas:
             print(f"  FALHOU: {nome} ({n} problemas)")
@@ -51,4 +71,4 @@ def executar_carga() -> None:
 
 
 if __name__ == "__main__":
-    executar_carga()
+    rodar()
