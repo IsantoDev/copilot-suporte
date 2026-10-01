@@ -68,24 +68,29 @@ def buscar_todos(rota: str = 'tickets', por_pagina: int = 100, max_paginas: int 
     return todos        
 
 
+def juntar_sem_duplicar(*listas: list[dict]) -> list[dict]:
+    """Junta listas de tickets; se um id se repete, fica o de lastUpdate mais recente."""
+    por_id= {}
+    for lista in listas:
+        for ticket in lista:
+            guardado = por_id.get(ticket['id'])
+            if guardado is None or ticket['lastUpdate'] > guardado['lastUpdate']:
+                por_id[ticket['id']] = ticket
+
+    return list(por_id.values())
+        
+
 def buscar_historico(por_pagina: int = 100) -> list[dict]:
     """Busca os tickets das duas rotas e remove duplicados pelo id."""
     recentes = buscar_todos(rota="tickets", por_pagina=por_pagina)
     antigos = buscar_todos(rota="tickets/past", por_pagina=por_pagina)
-    print("recentes:", len(recentes), "| antigos:", len(antigos))
 
-    por_id = {}
-    for ticket in recentes + antigos:
-        id_ticket = ticket["id"]
-        guardado = por_id.get(id_ticket)
+    tickets = juntar_sem_duplicar(recentes, antigos)  
 
-        if guardado is None or ticket["lastUpdate"] > guardado["lastUpdate"]:
-            por_id[id_ticket] = ticket
+    duplicados = len(recentes) + len(antigos) - len(tickets)
+    print("recentes:", len(recentes), "| antigos:", len(antigos), "| duplicados removidos:", duplicados)
 
-    duplicados = len(recentes) + len(antigos) - len(por_id)
-    print("duplicados removidos:", duplicados)
-
-    return list(por_id.values())
+    return tickets
 
 if __name__ == "__main__":
     tickets = buscar_todos(por_pagina=100)
