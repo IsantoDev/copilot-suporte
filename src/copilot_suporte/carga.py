@@ -3,7 +3,6 @@ from datetime import datetime, timedelta, timezone
 from copilot_suporte.banco import checar_qualidade, executar_sql, salvar_raw, ultima_atualizacao,finalizar_execucao, iniciar_execucao
 from copilot_suporte.movidesk import buscar_historico, buscar_todos
 from copilot_suporte.vetores import gerar_vetores
-from copilot_suporte.banco import checar_qualidade, executar_sql, finalizar_execucao, iniciar_execucao, salvar_raw, ultima_atualizacao
 
 MARGEM = timedelta(minutes=30)  
 
