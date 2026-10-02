@@ -36,12 +36,6 @@ SQL_UPSERT = """
 """
 
 
-def conectar() -> psycopg.Connection:
-    conn = psycopg.connect(password=os.environ["PGPASSWORD"])
-    register_vector(conn)
-    return conn
-
-
 def gerar_vetores() -> int:
     """Gera embeddings só para tickets novos, com texto alterado ou de outro modelo."""
     with conectar() as conn:
