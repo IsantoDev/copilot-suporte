@@ -4,8 +4,15 @@ import psycopg
 from dotenv import load_dotenv
 from pgvector.psycopg import register_vector
 from sentence_transformers import SentenceTransformer
+from copilot_suporte import banco
+
 
 load_dotenv()
+
+def conectar() -> psycopg.Connection:
+    conn = banco.conectar()
+    register_vector(conn)
+    return conn
 
 MODELO = "google/embeddinggemma-300m"
 
