@@ -102,13 +102,25 @@ A primeira execução busca o histórico completo; as seguintes, só o que mudou
 
 ```
 src/copilot_suporte/
-    movidesk.py   cliente da API: paginação, novas tentativas, filtro por data
-    banco.py      conexão, gravação do bruto, execução dos .sql e checagens
-    carga.py      orquestra: buscar, gravar, tratar, conferir
+    config.py       configuração lida do .env (o token nunca aparece ao imprimir)
+    movidesk.py     ClienteMovidesk: paginação, novas tentativas, sessão HTTP reaproveitada
+    banco.py        Banco: pool de conexões com tempo limite e todas as consultas
+    vetorizador.py  Vetorizador: o modelo de embeddings, carregado só quando é usado
+    carga.py        Pipeline: buscar, gravar, tratar, gerar vetores, conferir e registrar a execução
+    buscar.py       Buscador: tickets resolvidos parecidos, por número ou por texto
+    api.py          API local (FastAPI) e a rota /saude para o monitoramento
+    avaliar.py      avaliação manual da busca (precisão nos 5 primeiros, acerto no 1º, MRR)
+    static/         página web da busca
 sql/
-    001_camadas.sql         tabela bruta
-    002_limpo_tickets.sql   tabela tratada de tickets
-    003_limpo_acoes.sql     tabela tratada de mensagens
-    004_checagens.sql       checagens de qualidade
-scripts/carga.bat           execução agendada
+    001_camadas.sql            tabela bruta
+    002_limpo_tickets.sql      tabela tratada de tickets
+    003_limpo_acoes.sql        tabela tratada de mensagens
+    004_checagens.sql          checagens de qualidade
+    005_limpo_problema.sql     texto do problema de cada ticket
+    006_vetores_problemas.sql  extensão pgvector e tabela de vetores
+    007_limpo_solucoes.sql     solução pública e nota técnica de cada ticket resolvido
+    008_avaliacao.sql          tabelas da avaliação manual
+    009_execucoes_pipeline.sql registro de cada execução, lido pelo monitoramento
+scripts/carga.bat              execução agendada
+tests/                         testes sem banco, sem API e sem o modelo (dublês)
 ```

@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from copilot-suporte!")
+"""Copiloto de Suporte: dados, busca e modelos sobre os chamados do Movidesk."""

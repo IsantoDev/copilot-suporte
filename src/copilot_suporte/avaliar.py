@@ -1,10 +1,15 @@
+"""Avaliação manual da busca: você julga os resultados, e o script calcula as métricas."""
+
 import argparse
 
-from copilot_suporte.buscar import buscar_parecidos, vetor_do_ticket
-from copilot_suporte.vetores import MODELO, conectar
+from copilot_suporte.banco import Banco
+from copilot_suporte.buscar import Buscador
+from copilot_suporte.config import Config
+from copilot_suporte.vetorizador import Vetorizador
 
 N_CONSULTAS = 30
 K = 5
+MAX_POR_CATEGORIA = 3  # as categorias são poucas e grandes: com 3 por categoria saíram só 15 consultas
 
 SQL_SORTEIO = """
     insert into avaliacao_consultas (consulta_id)
@@ -16,37 +21,37 @@ SQL_SORTEIO = """
         join limpo_tickets t on t.ticket_id = s.ticket_id
         join vetores_problemas v on v.ticket_id = s.ticket_id
     ) sorteio
-    where ordem <= 3
+    where ordem <= %s
     order by random()
     limit %s
 """
 
 
-def consultas(conn) -> list[int]:
-    """Devolve o conjunto fixo de consultas; sorteia na primeira vez."""
-    if conn.execute("select count(*) from avaliacao_consultas").fetchone()[0] == 0:
-        conn.execute(SQL_SORTEIO, (N_CONSULTAS,))
-        print(f"sorteadas {N_CONSULTAS} consultas")
-    return [linha[0] for linha in conn.execute("select consulta_id from avaliacao_consultas order by consulta_id")]
+def consultas(banco: Banco) -> list[int]:
+    """O conjunto fixo de consultas; é sorteado só na primeira vez (para comparar modelos na mesma prova)."""
+    with banco.conexao() as conn:
+        if conn.execute("select count(*) from avaliacao_consultas").fetchone()[0] == 0:
+            conn.execute(SQL_SORTEIO, (MAX_POR_CATEGORIA, N_CONSULTAS))
+            print("consultas sorteadas")
+        return [linha[0] for linha in conn.execute("select consulta_id from avaliacao_consultas order by consulta_id")]
 
 
-def julgamentos(conn) -> dict[tuple[int, int], bool]:
-    linhas = conn.execute("select consulta_id, resultado_id, relevante from avaliacao_busca")
+def julgamentos(banco: Banco) -> dict[tuple[int, int], bool]:
+    with banco.conexao() as conn:
+        linhas = conn.execute("select consulta_id, resultado_id, relevante from avaliacao_busca").fetchall()
     return {(c, r): relevante for c, r, relevante in linhas}
 
 
-def resumos(ids: list[int], tamanho: int) -> dict[int, str]:
-    """Lê o texto do problema de vários tickets de uma vez, numa conexão curta."""
-    with conectar() as conn:
+def resumos(banco: Banco, ids: list[int], tamanho: int) -> dict[int, str]:
+    with banco.conexao() as conn:
         linhas = conn.execute(
             "select ticket_id, texto from limpo_problemas where ticket_id = any(%s)", (ids,)
         ).fetchall()
     return {ticket_id: " ".join(texto.split())[:tamanho] for ticket_id, texto in linhas}
 
 
-def gravar(consulta_id: int, resultado_id: int, relevante: bool) -> None:
-    """Grava um julgamento numa conexão própria, aberta só para isso."""
-    with conectar() as conn:
+def gravar(banco: Banco, consulta_id: int, resultado_id: int, relevante: bool) -> None:
+    with banco.conexao() as conn:
         conn.execute(
             "insert into avaliacao_busca (consulta_id, resultado_id, relevante) values (%s, %s, %s)",
             (consulta_id, resultado_id, relevante),
@@ -60,56 +65,53 @@ def perguntar() -> str:
             return resposta
 
 
-def avaliar() -> None:
+def avaliar(banco: Banco, buscador: Buscador) -> None:
     """Mostra os K resultados de cada consulta e grava o seu julgamento.
 
-    Nenhuma conexão fica aberta enquanto o programa espera a sua resposta:
-    os textos são lidos antes da pergunta, e cada resposta é gravada à parte.
+    Nenhuma conexão fica emprestada enquanto o programa espera a sua resposta:
+    cada leitura e cada gravação pega uma conexão do pool e devolve na hora.
     """
-    with conectar() as conn:
-        ids = consultas(conn)
-        ja_julgados = julgamentos(conn)
+    ids = consultas(banco)
+    ja_julgados = julgamentos(banco)
 
     for numero, consulta_id in enumerate(ids, start=1):
-        resultados = buscar_parecidos(vetor_do_ticket(consulta_id), K, consulta_id)
-        pendentes = [r for r in resultados if (consulta_id, r[0]) not in ja_julgados]
+        pendentes = [r for r in buscador.por_ticket(consulta_id, K) or [] if (consulta_id, r.ticket_id) not in ja_julgados]
         if not pendentes:
             continue
 
-        textos = resumos([consulta_id] + [r[0] for r in pendentes], 500)
+        textos = resumos(banco, [consulta_id] + [r.ticket_id for r in pendentes], 500)
         print(f"\n{'=' * 80}\nCONSULTA {numero}/{len(ids)} · problema de referência #{consulta_id}")
         print(textos[consulta_id])
-        for resultado_id, similaridade, *_ in pendentes:
-            print(f"\n   → candidato #{resultado_id} ({similaridade:.2f}) {textos[resultado_id][:300]}")
+        for r in pendentes:
+            print(f"\n   → candidato #{r.ticket_id} ({r.similaridade:.2f}) {textos[r.ticket_id][:300]}")
             resposta = perguntar()
             if resposta == "q":
                 print("parado. Rode de novo para continuar de onde parou.")
                 return
             if resposta == "p":
                 continue
-            gravar(consulta_id, resultado_id, resposta == "s")
+            gravar(banco, consulta_id, r.ticket_id, resposta == "s")
 
 
-def relatorio() -> None:
-    """Calcula as métricas da busca com os julgamentos já feitos."""
-    with conectar() as conn:
-        ids = consultas(conn)
-        ja_julgados = julgamentos(conn)
+def relatorio(banco: Banco, buscador: Buscador) -> None:
+    """Precisão nos K primeiros, acerto no 1º resultado e MRR, com os julgamentos já feitos."""
+    ids = consultas(banco)
+    ja_julgados = julgamentos(banco)
 
     precisoes, acertos_no_primeiro, reciprocos, faltando = [], [], [], 0
     for consulta_id in ids:
-        resultados = buscar_parecidos(vetor_do_ticket(consulta_id), K, consulta_id)
-        relevancias = [ja_julgados.get((consulta_id, r[0])) for r in resultados]
-        if None in relevancias:
+        resultados = buscador.por_ticket(consulta_id, K) or []
+        relevancias = [ja_julgados.get((consulta_id, r.ticket_id)) for r in resultados]
+        if not relevancias or None in relevancias:
             faltando += 1
             continue
         precisoes.append(sum(relevancias) / K)
         acertos_no_primeiro.append(relevancias[0])
-        primeira = next((i for i, rel in enumerate(relevancias, start=1) if rel), None)
+        primeira = next((i for i, relevante in enumerate(relevancias, start=1) if relevante), None)
         reciprocos.append(1 / primeira if primeira else 0)
 
     n = len(precisoes)
-    print(f"modelo: {MODELO}")
+    print(f"modelo: {buscador.vetorizador.nome}")
     print(f"consultas avaliadas: {n} de {len(ids)}" + (f" ({faltando} com julgamento incompleto)" if faltando else ""))
     if n:
         print(f"precisão nos {K} primeiros: {sum(precisoes) / n:.1%}")
@@ -117,10 +119,17 @@ def relatorio() -> None:
         print(f"MRR:                       {sum(reciprocos) / n:.3f}")
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser(description="Avaliação manual da busca de tickets parecidos.")
     parser.add_argument("--relatorio", action="store_true", help="só calcula as métricas")
-    if parser.parse_args().relatorio:
-        relatorio()
-    else:
-        avaliar()
+    args = parser.parse_args()
+    with Banco() as banco:
+        buscador = Buscador(banco, Vetorizador(Config().modelo))
+        if args.relatorio:
+            relatorio(banco, buscador)
+        else:
+            avaliar(banco, buscador)
+
+
+if __name__ == "__main__":
+    main()

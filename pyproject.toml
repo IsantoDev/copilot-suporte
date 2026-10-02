@@ -1,7 +1,7 @@
 [project]
 name = "copilot-suporte"
 version = "0.1.0"
-description = "Add your description here"
+description = "Coleta, organização e busca dos chamados de suporte do Movidesk"
 readme = "README.md"
 authors = [
     { name = "isantoDev", email = "isantos.code@gmail.com" }
@@ -10,15 +10,13 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.141.1",
     "pgvector>=0.5.0",
+    "psycopg-pool>=3.3.3",
     "psycopg[binary]>=3.3.6",
     "python-dotenv>=1.2.3",
     "requests>=2.34.2",
     "sentence-transformers>=6.1.0",
     "transformers>=4.57",
 ]
-
-[project.scripts]
-copilot-suporte = "copilot_suporte:main"
 
 [build-system]
 requires = ["uv_build>=0.11.19,<0.12.0"]
